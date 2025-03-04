@@ -1,8 +1,8 @@
 // import React, { useState, useEffect } from 'react';
 // import { Canvas } from '@react-three/fiber';
 // import { OrbitControls, useGLTF } from '@react-three/drei';
-// import { db } from './firebase'; // Ensure this points to your Firebase config
-// import { collection, getDocs } from 'firebase/firestore'; // Corrected import
+// import { db } from './firebase';
+// import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 // import './App.css';
 
 // function Model({ url }) {
@@ -15,18 +15,27 @@
 //   const [filteredModels, setFilteredModels] = useState([]);
 //   const [search, setSearch] = useState('');
 //   const [selectedModel, setSelectedModel] = useState(null);
+//   const [formData, setFormData] = useState({ name: '', description: '', url: '', id: '' });
+//   const [isEditing, setIsEditing] = useState(false);
 
+//   // Fetch models from Firebase
 //   useEffect(() => {
 //     const fetchModels = async () => {
-//       const querySnapshot = await getDocs(collection(db, 'models'));
-//       const modelList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-//       setModels(modelList);
-//       setFilteredModels(modelList);
-//       setSelectedModel(modelList[0]?.url); // Default to first model’s URL
+//       try {
+//         const querySnapshot = await getDocs(collection(db, 'models'));
+//         const modelList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+//         console.log('Fetched models:', modelList);
+//         setModels(modelList);
+//         setFilteredModels(modelList);
+//         setSelectedModel(modelList[0]?.url); // Default to first model’s URL
+//       } catch (error) {
+//         console.error('Error fetching models:', error);
+//       }
 //     };
 //     fetchModels();
 //   }, []);
 
+//   // Filter models based on search input
 //   const handleSearch = (e) => {
 //     const value = e.target.value;
 //     setSearch(value);
@@ -35,6 +44,71 @@
 //     );
 //     setFilteredModels(filtered);
 //     setSelectedModel(filtered[0]?.url || null);
+//   };
+
+//   // Handle form input changes
+//   const handleInputChange = (e) => {
+//     const { name, value } = e.target;
+//     setFormData(prev => ({ ...prev, [name]: value }));
+//   };
+
+//   // Create or Update model
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     try {
+//       if (isEditing && formData.id) {
+//         // Update existing model
+//         await updateDoc(doc(db, 'models', formData.id), {
+//           name: formData.name,
+//           description: formData.description,
+//           url: formData.url,
+//         });
+//       } else {
+//         // Create new model
+//         await addDoc(collection(db, 'models'), {
+//           name: formData.name,
+//           description: formData.description,
+//           url: formData.url,
+//           uploadDate: new Date().toISOString(),
+//         });
+//       }
+//       // Refetch models after create/update
+//       const querySnapshot = await getDocs(collection(db, 'models'));
+//       const modelList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+//       setModels(modelList);
+//       setFilteredModels(modelList);
+//       setSelectedModel(modelList[0]?.url);
+//       setFormData({ name: '', description: '', url: '', id: '' }); // Reset form
+//       setIsEditing(false);
+//     } catch (error) {
+//       console.error('Error creating/updating model:', error);
+//     }
+//   };
+
+//   // Edit model
+//   const handleEdit = (model) => {
+//     setFormData({
+//       name: model.name,
+//       description: model.description,
+//       url: model.url,
+//       id: model.id,
+//     });
+//     setIsEditing(true);
+//     setSelectedModel(model.url);
+//   };
+
+//   // Delete model
+//   const handleDelete = async (id) => {
+//     try {
+//       await deleteDoc(doc(db, 'models', id));
+//       const querySnapshot = await getDocs(collection(db, 'models'));
+//       const modelList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+//       setModels(modelList);
+//       setFilteredModels(modelList);
+//       setSelectedModel(modelList[0]?.url || null);
+//     } catch (error) {
+//       console.error('Error deleting model:', error);
+//     }
 //   };
 
 //   return (
@@ -47,6 +121,52 @@
 //           onChange={handleSearch}
 //         />
 //       </div>
+
+//       {/* Form for Create/Update */}
+//       <div className="form-container">
+//         <form onSubmit={handleSubmit}>
+//           <input
+//             type="text"
+//             name="name"
+//             placeholder="Model Name"
+//             value={formData.name}
+//             onChange={handleInputChange}
+//             required
+//           />
+//           <input
+//             type="text"
+//             name="description"
+//             placeholder="Description"
+//             value={formData.description}
+//             onChange={handleInputChange}
+//           />
+//           <input
+//             type="url"
+//             name="url"
+//             placeholder="Model URL (GLB/GLTF)"
+//             value={formData.url}
+//             onChange={handleInputChange}
+//             required
+//           />
+//           <button type="submit">{isEditing ? 'Update Model' : 'Add Model'}</button>
+//           {isEditing && (
+//             <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
+//           )}
+//         </form>
+//       </div>
+
+//       {/* List of Models */}
+//       <div className="models-list">
+//         {filteredModels.map(model => (
+//           <div key={model.id} className="model-item">
+//             <h3>{model.name}</h3>
+//             <p>{model.description}</p>
+//             <button onClick={() => handleEdit(model)}>Edit</button>
+//             <button onClick={() => handleDelete(model.id)}>Delete</button>
+//           </div>
+//         ))}
+//       </div>
+
 //       <div className="canvas-container">
 //         {selectedModel ? (
 //           <Canvas>
@@ -64,6 +184,9 @@
 // }
 
 // export default App;
+
+
+
 
 import React, { useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
@@ -84,10 +207,13 @@ function App() {
   const [selectedModel, setSelectedModel] = useState(null);
   const [formData, setFormData] = useState({ name: '', description: '', url: '', id: '' });
   const [isEditing, setIsEditing] = useState(false);
+  const [message, setMessage] = useState(''); // Success/Error messages
+  const [loading, setLoading] = useState(true); // Loading state
 
   // Fetch models from Firebase
   useEffect(() => {
     const fetchModels = async () => {
+      setLoading(true);
       try {
         const querySnapshot = await getDocs(collection(db, 'models'));
         const modelList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -97,6 +223,9 @@ function App() {
         setSelectedModel(modelList[0]?.url); // Default to first model’s URL
       } catch (error) {
         console.error('Error fetching models:', error);
+        setMessage('Failed to fetch models. Please try again.');
+      } finally {
+        setLoading(false);
       }
     };
     fetchModels();
@@ -130,6 +259,7 @@ function App() {
           description: formData.description,
           url: formData.url,
         });
+        setMessage('Model updated successfully!');
       } else {
         // Create new model
         await addDoc(collection(db, 'models'), {
@@ -138,6 +268,7 @@ function App() {
           url: formData.url,
           uploadDate: new Date().toISOString(),
         });
+        setMessage('Model added successfully!');
       }
       // Refetch models after create/update
       const querySnapshot = await getDocs(collection(db, 'models'));
@@ -147,8 +278,10 @@ function App() {
       setSelectedModel(modelList[0]?.url);
       setFormData({ name: '', description: '', url: '', id: '' }); // Reset form
       setIsEditing(false);
+      setTimeout(() => setMessage(''), 3000); // Clear message after 3 seconds
     } catch (error) {
       console.error('Error creating/updating model:', error);
+      setMessage('Failed to save model. Please try again.');
     }
   };
 
@@ -168,13 +301,16 @@ function App() {
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, 'models', id));
+      setMessage('Model deleted successfully!');
       const querySnapshot = await getDocs(collection(db, 'models'));
       const modelList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setModels(modelList);
       setFilteredModels(modelList);
       setSelectedModel(modelList[0]?.url || null);
+      setTimeout(() => setMessage(''), 3000); // Clear message after 3 seconds
     } catch (error) {
       console.error('Error deleting model:', error);
+      setMessage('Failed to delete model. Please try again.');
     }
   };
 
@@ -222,18 +358,38 @@ function App() {
         </form>
       </div>
 
-      {/* List of Models */}
-      <div className="models-list">
-        {filteredModels.map(model => (
-          <div key={model.id} className="model-item">
-            <h3>{model.name}</h3>
-            <p>{model.description}</p>
-            <button onClick={() => handleEdit(model)}>Edit</button>
-            <button onClick={() => handleDelete(model.id)}>Delete</button>
-          </div>
-        ))}
-      </div>
+      {/* Success/Error Message */}
+      {message && <p className="message">{message}</p>}
 
+      {/* List of Models */}
+      {loading ? (
+        <p className="loading">Loading models...</p>
+      ) : (
+        <div className="models-list">
+          {filteredModels.length > 0 ? (
+            filteredModels.map(model => (
+              <div
+                key={model.id}
+                className="model-item"
+                onMouseEnter={() => setSelectedModel(model.url)}
+              >
+                <div>
+                  <h3>{model.name}</h3>
+                  <p>{model.description}</p>
+                </div>
+                <div>
+                  <button onClick={() => handleEdit(model)}>Edit</button>
+                  <button onClick={() => handleDelete(model.id)}>Delete</button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p>No models found</p>
+          )}
+        </div>
+      )}
+
+      {/* Canvas for 3D Model */}
       <div className="canvas-container">
         {selectedModel ? (
           <Canvas>
