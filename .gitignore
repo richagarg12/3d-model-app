@@ -1,0 +1,11 @@
+# Node.js
+node_modules/
+*.log
+.env
+
+# React
+client/build/
+client/node_modules/
+
+# Firebase
+server/service-account.json
